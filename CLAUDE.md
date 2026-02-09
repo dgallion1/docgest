@@ -6,7 +6,7 @@ Standalone Go service that ingests documents and writes extracted facts into pat
 
 ```bash
 # Required env vars
-export PATHSTORE_API_KEY=dev-key-please-change
+export PATHSTORE_API_KEY=dev-key-92344a80efd093348436396ed423516c
 export DOCGEST_API_KEY=my-docgest-key
 export ANTHROPIC_API_KEY=sk-ant-...
 export ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
