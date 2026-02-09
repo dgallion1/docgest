@@ -72,5 +72,5 @@ TXT, Markdown, CSV, HTML, PDF (with pdftotext fallback), DOCX
 
 `Upload → Parse → DocTree → Chunk (structure-aware) → Extract (Claude) → Validate → Store Facts → Write Manifest`
 
-Facts are stored in the same paths as chat-agent extraction. A manifest under
+Facts are stored in the same paths as homer extraction. A manifest under
 `documents/{doc_id}/facts/` enables exact deletion without scanning entity/topic trees.
