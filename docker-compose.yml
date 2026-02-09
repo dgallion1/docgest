@@ -1,0 +1,46 @@
+services:
+  docgest:
+    build: .
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: "8090"
+      PATHSTORE_URL: "http://pathstore:8080"
+      PATHSTORE_API_KEY: "${PATHSTORE_API_KEY}"
+      DOCGEST_API_KEY: "${DOCGEST_API_KEY}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      ANTHROPIC_MODEL: "${ANTHROPIC_MODEL:-claude-sonnet-4-5-20250929}"
+      WORKER_COUNT: "4"
+      MAX_QUEUE_SIZE: "100"
+      MAX_CONCURRENT_EXTRACT: "5"
+      MAX_CONCURRENT_STORE: "10"
+    depends_on:
+      - pathstore
+
+  pathstore:
+    image: docgest-pathstore
+    build:
+      context: ../pathstore
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: "postgres://memory:memory@postgres:5432/memorydb?sslmode=disable"
+      SEED_DEV_KEY: "true"
+      ENABLE_VECTOR_SEARCH: "true"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: memory
+      POSTGRES_PASSWORD: memory
+      POSTGRES_DB: memorydb
+    ports:
+      - "5433:5432"
+    volumes:
+      - ../pathstore/migrations:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
