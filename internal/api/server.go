@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/dgallion1/docgest/internal/config"
+	"github.com/dgallion1/docgest/internal/extract"
 	"github.com/dgallion1/docgest/internal/pipeline"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -14,14 +15,16 @@ import (
 type Server struct {
 	router       chi.Router
 	orchestrator *pipeline.Orchestrator
+	claude       *extract.ClaudeClient
 	log          *slog.Logger
 	cfg          config.Config
 }
 
 // NewServer creates and configures the HTTP server.
-func NewServer(orch *pipeline.Orchestrator, log *slog.Logger, cfg config.Config) *Server {
+func NewServer(orch *pipeline.Orchestrator, claude *extract.ClaudeClient, log *slog.Logger, cfg config.Config) *Server {
 	s := &Server{
 		orchestrator: orch,
+		claude:       claude,
 		log:          log,
 		cfg:          cfg,
 	}
@@ -49,6 +52,7 @@ func (s *Server) setupRoutes() {
 		r.Post("/api/ingest", s.handleIngest)
 		r.Get("/api/ingest/{jobID}/status", s.handleIngestStatus)
 		r.Post("/api/ingest/batch", s.handleBatchIngest)
+		r.Get("/api/stats/llm", s.handleLLMStats)
 
 		r.Get("/api/documents", s.handleListDocuments)
 		r.Delete("/api/documents/{docID}", s.handleDeleteDocument)

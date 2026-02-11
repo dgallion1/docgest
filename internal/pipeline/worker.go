@@ -105,9 +105,13 @@ func (w *Worker) Process(ctx context.Context, job *Job) {
 			defer func() { <-sem }()
 			prompt := extract.BuildChunkPrompt(tree.Title, chunk.Breadcrumb, chunk.Text)
 			var facts []extract.Fact
+			var result *extract.ExtractionResult
 			var lastErr error
 			for attempt := range MaxRetries {
-				facts, lastErr = w.claude.ExtractFacts(ctx, prompt)
+				result, lastErr = w.claude.ExtractFacts(ctx, prompt)
+				if lastErr == nil && result != nil {
+					facts = result.Facts
+				}
 				if lastErr == nil || !IsRetryable(lastErr) {
 					break
 				}
@@ -182,7 +186,7 @@ func (w *Worker) Process(ctx context.Context, job *Job) {
 				},
 				MemoryType: "metacognitive",
 				Salience:   0.1,
-				Source:      "docgest:" + job.DocID,
+				Source:     "docgest:" + job.DocID,
 			})
 			if manifestErr != nil {
 				log.Warn("manifest write failed", "path", manifestPath, "error", manifestErr)

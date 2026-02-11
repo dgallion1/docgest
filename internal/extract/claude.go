@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -17,6 +18,7 @@ type ClaudeClient struct {
 	apiKey     string
 	model      string
 	httpClient *http.Client
+	Stats      *LLMStats
 }
 
 func NewClaudeClient(apiKey, model string) *ClaudeClient {
@@ -26,6 +28,7 @@ func NewClaudeClient(apiKey, model string) *ClaudeClient {
 		httpClient: &http.Client{
 			Timeout: 120 * time.Second,
 		},
+		Stats: NewLLMStats(1 * time.Hour),
 	}
 }
 
@@ -52,8 +55,25 @@ type anthropicResponse struct {
 	} `json:"error"`
 }
 
+type ExtractionResult struct {
+	Facts      []Fact `json:"facts"`
+	DurationMs int64  `json:"duration_ms"`
+}
+
 // ExtractFacts calls Claude to extract facts from a chunk prompt.
-func (c *ClaudeClient) ExtractFacts(ctx context.Context, prompt string) ([]Fact, error) {
+func (c *ClaudeClient) ExtractFacts(ctx context.Context, prompt string) (result *ExtractionResult, err error) {
+	start := time.Now()
+	defer func() {
+		durationMs := time.Since(start).Milliseconds()
+		if c.Stats != nil {
+			c.Stats.Record(durationMs)
+		}
+		slog.Info("claude extraction request", "model", c.model, "duration_ms", durationMs)
+		if err == nil && result != nil {
+			result.DurationMs = durationMs
+		}
+	}()
+
 	reqBody := anthropicRequest{
 		Model:     c.model,
 		MaxTokens: 4096,
@@ -114,7 +134,7 @@ func (c *ClaudeClient) ExtractFacts(ctx context.Context, prompt string) ([]Fact,
 		return nil, fmt.Errorf("parse facts json: %w (raw: %s)", err, truncate(text, 200))
 	}
 
-	return facts, nil
+	return &ExtractionResult{Facts: facts}, nil
 }
 
 var codeBlockRe = regexp.MustCompile("(?s)^```(?:json)?\\s*(.*?)\\s*```$")
@@ -132,6 +152,10 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+func (c *ClaudeClient) Model() string {
+	return c.model
 }
 
 // RetryableError indicates a transient failure that can be retried.

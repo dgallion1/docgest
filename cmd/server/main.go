@@ -37,7 +37,7 @@ func main() {
 	orch.Start(ctx)
 
 	// Initialize HTTP server.
-	srv := api.NewServer(orch, log, cfg)
+	srv := api.NewServer(orch, claude, log, cfg)
 
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Port,
